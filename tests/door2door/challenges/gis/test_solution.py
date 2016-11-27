@@ -91,3 +91,37 @@ class SolutionTest(unittest2.TestCase):
             self.assertAlmostEqual(weighted_points[1]["meta"]["weight"], 10.0, 2)
             self.assertAlmostEqual(weighted_points[2]["meta"]["weight"], 53.8461538462, 2)
             self.assertAlmostEqual(weighted_points[3]["meta"]["weight"], 12000.0, 2)
+
+    def test_filter_points_by_routes(self):
+        points = [
+            {
+                "coordinates": {
+                    "lat": 0.005,
+                    "lng": 0.005
+                },
+            },
+            {
+                "coordinates": {
+                    "lat": -0.005,
+                    "lng": 0.005
+                },
+            },
+            {
+                "coordinates": {
+                    "lat": 0.005,
+                    "lng": 0
+                },
+            }
+        ]
+        routes = {
+            "MultiLineString": [
+                [[0, 0], [0, 0.01]]
+            ]
+        }
+        margin_meters = 150
+        mean_earth_radius = 6371000
+
+        with self.subTest(msg="Test: Filters points correctly"):
+            filtered_points = solution.filter_points_by_routes(points, routes, margin_meters, mean_earth_radius)
+            self.assertEqual(len(filtered_points), 1)
+            self.assertEqual(filtered_points, [{"coordinates": {"lat": 0.005, "lng": 0}, }])

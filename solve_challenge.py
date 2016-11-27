@@ -8,18 +8,19 @@ import door2door.challenges.gis.solution
 
 def main(argv):
     points_file = None
+    routes_file = None
 
-    options_list = ["points="]
-    help_msg = "solve_challenge.py --points=</path/to/points.geojson>"
+    options_list = ["points=", "routes="]
+    help_msg = "solve_challenge.py --points=</path/to/points.geojson> --routes=</path/to/routes.geojson>"
 
-    if len(argv) != 1:
-        print help_msg
+    if len(argv) != 2:
+        print(help_msg)
         sys.exit(2)
 
     try:
         opts, args = getopt.getopt(argv, "", options_list)
     except getopt.GetoptError:
-        print help_msg
+        print(help_msg)
         sys.exit(2)
 
     try:
@@ -29,15 +30,20 @@ def main(argv):
                     points_file = arg
                 else:
                     raise Exception(arg)
+            elif opt == "--routes":
+                if os.path.isfile(arg):
+                    routes_file = arg
+                else:
+                    raise Exception(arg)
     except Exception as e:
-        print e.args[0] + " is not a vaild file"
+        print(str(e.args[0]) + " is not a valid file")
         sys.exit(2)
 
     points = None
-    with open(points_file, "r") as pf:
+    routes = None
+    with open(points_file, "r") as pf, open(routes_file, "r") as rf:
         points = json.load(pf)
-
-    # TODO Validate data to be GeoJSON with proper properties schema for feature object
+        routes = json.load(rf)
 
     points_formatted = []
     for f in points["features"]:
@@ -49,8 +55,16 @@ def main(argv):
             "meta": f["properties"]
         })
 
-    result = door2door.challenges.gis.solution.solve(points_formatted,
-                                                     [
+    routes_formatted = {
+        "MultiLineString": []
+    }
+    for f in routes["features"]:
+        routes_formatted["MultiLineString"].append(f["geometry"]["coordinates"])
+
+    # TODO Validate data to be GeoJSON with proper properties schema for feature object
+
+    result = door2door.challenges.gis.solution.solve(points=points_formatted,
+                                                     activity_bias=[
                                                          {
                                                              "previous_dominating_activity": "none",
                                                              "current_dominating_activity": "none",
@@ -176,8 +190,10 @@ def main(argv):
                                                              "current_dominating_activity": "in_vehicle",
                                                              "weight": 10
                                                          }
-                                                     ])
-
+                                                     ],
+                                                     routes=routes_formatted,
+                                                     margin_meters=150,
+                                                     mean_earth_radius=6371000)
     pp = pprint.PrettyPrinter(indent=4)
     pp.pprint(result)
 

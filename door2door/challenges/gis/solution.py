@@ -1,10 +1,13 @@
 """A solution for the Door2Door GIS challenge: https://github.com/door2door-io/gis-code-challenge"""
+from shapely.geometry import Point, MultiLineString
+from door2door.utils import gis
 
 
-def solve(points, activity_bias):
+def solve(points, activity_bias, routes, margin_meters, mean_earth_radius):
     """Solve the GIS challenge"""
     weighted_points = assign_activity_weights(points, activity_bias)
-    return weighted_points
+    filtered_points = filter_points_by_routes(weighted_points, routes, margin_meters, mean_earth_radius)
+    return filtered_points
 
 
 def assign_activity_weights(points, activity_bias):
@@ -44,3 +47,14 @@ def weight_function(bias, previous_activity_confidence, current_activity_confide
     # e.g. accuracy of 10 means that the measurement is accurate up to 10 meters, while an accuracy of 100 means that
     # the measurement is accurate up to 100 meters)
     return (bias * previous_activity_confidence * current_activity_confidence) / accuracy
+
+
+def filter_points_by_routes(points, routes, margin_meters, mean_earth_radius):
+    """Filter points that are on routes with tolerance of margin_meters"""
+    routes_shape = MultiLineString(routes["MultiLineString"])
+    routes_buffered = routes_shape.buffer(gis.meters_to_degrees(margin_meters, mean_earth_radius))
+    filtered = []
+    for point in points:
+        if routes_buffered.contains(Point(point["coordinates"]["lng"], point["coordinates"]["lat"])):
+            filtered.append(point)
+    return filtered
