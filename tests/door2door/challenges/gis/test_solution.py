@@ -125,3 +125,115 @@ class SolutionTest(unittest2.TestCase):
             filtered_points = solution.filter_points_by_routes(points, routes, margin_meters, mean_earth_radius)
             self.assertEqual(len(filtered_points), 1)
             self.assertEqual(filtered_points, [{"coordinates": {"lat": 0.005, "lng": 0}, }])
+
+    def test_cluster_points_by_distance(self):
+        points = [
+            {
+                "coordinates": {
+                    "lng": 0,
+                    "lat": 0
+                }
+            },
+            {
+                "coordinates": {
+                    "lng": 0,
+                    "lat": 0.0001
+                }
+            },
+            {
+                "coordinates": {
+                    "lng": 0,
+                    "lat": 0.0002
+                }
+            },
+            {
+                "coordinates": {
+                    "lng": 0,
+                    "lat": 0.0003
+                }
+            },
+            {
+                "coordinates": {
+                    "lng": 0,
+                    "lat": 0.001
+                }
+            },
+            {
+                "coordinates": {
+                    "lng": 0,
+                    "lat": 0.0011
+                }
+            },
+            {
+                "coordinates": {
+                    "lng": 0,
+                    "lat": 0.0012
+                }
+            },
+            {
+                "coordinates": {
+                    "lng": 0,
+                    "lat": 0.0013
+                }
+            }
+        ]
+
+        with self.subTest(msg="Test: Clusters points correctly"):
+            clusters = solution.cluster_points_by_distance(points, 100, 6371000)
+            self.assertEqual(len(clusters), 2)
+            self.assertEqual(len(clusters[0]), 4)
+            self.assertEqual(len(clusters[1]), 4)
+            self.assertEqual(clusters, [
+                [
+                    {
+                        "coordinates": {
+                            "lng": 0,
+                            "lat": 0
+                        }
+                    },
+                    {
+                        "coordinates": {
+                            "lng": 0,
+                            "lat": 0.0001
+                        }
+                    },
+                    {
+                        "coordinates": {
+                            "lng": 0,
+                            "lat": 0.0002
+                        }
+                    },
+                    {
+                        "coordinates": {
+                            "lng": 0,
+                            "lat": 0.0003
+                        }
+                    }
+                ],
+                [
+                    {
+                        "coordinates": {
+                            "lng": 0,
+                            "lat": 0.001
+                        }
+                    },
+                    {
+                        "coordinates": {
+                            "lng": 0,
+                            "lat": 0.0011
+                        }
+                    },
+                    {
+                        "coordinates": {
+                            "lng": 0,
+                            "lat": 0.0012
+                        }
+                    },
+                    {
+                        "coordinates": {
+                            "lng": 0,
+                            "lat": 0.0013
+                        }
+                    }
+                ]
+            ])

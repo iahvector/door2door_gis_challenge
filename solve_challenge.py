@@ -2,7 +2,7 @@ import sys
 import getopt
 import os.path
 import json
-import pprint
+import geojson
 import door2door.challenges.gis.solution
 
 
@@ -193,9 +193,17 @@ def main(argv):
                                                      ],
                                                      routes=routes_formatted,
                                                      margin_meters=150,
-                                                     mean_earth_radius=6371000)
-    pp = pprint.PrettyPrinter(indent=4)
-    pp.pprint(result)
+                                                     mean_earth_radius=6371000,
+                                                     cluster_radius=150)
+
+    features = []
+    for p in result:
+        g = geojson.Point((p["coordinates"]["lng"], p["coordinates"]["lat"]))
+        f = geojson.Feature(geometry=g, properties=p["meta"])
+        features.append(f)
+
+    feature_collection = geojson.FeatureCollection(features)
+    geojson.dump(feature_collection, sys.stdout)
 
 
 if __name__ == "__main__":

@@ -1,13 +1,16 @@
 """A solution for the Door2Door GIS challenge: https://github.com/door2door-io/gis-code-challenge"""
-from shapely.geometry import Point, MultiLineString
+from __future__ import division
+from shapely.geometry import Point, MultiPoint, MultiLineString
 from door2door.utils import gis
 
 
-def solve(points, activity_bias, routes, margin_meters, mean_earth_radius):
+def solve(points, activity_bias, routes, margin_meters, mean_earth_radius, cluster_radius):
     """Solve the GIS challenge"""
     weighted_points = assign_activity_weights(points, activity_bias)
     filtered_points = filter_points_by_routes(weighted_points, routes, margin_meters, mean_earth_radius)
-    return filtered_points
+    clusters = cluster_points_by_distance(filtered_points, cluster_radius, mean_earth_radius)
+    centroids = reduce_clusters_to_centroids(clusters)
+    return centroids
 
 
 def assign_activity_weights(points, activity_bias):
@@ -58,3 +61,54 @@ def filter_points_by_routes(points, routes, margin_meters, mean_earth_radius):
         if routes_buffered.contains(Point(point["coordinates"]["lng"], point["coordinates"]["lat"])):
             filtered.append(point)
     return filtered
+
+
+def cluster_points_by_distance(points, distance_meters, radius):
+    """Group all points within distance_meters from each others into clusters"""
+    distance_degrees = gis.meters_to_degrees(distance_meters, radius)
+    clusters = []
+
+    while points:
+        p1 = Point(points[0]["coordinates"]["lng"], points[0]["coordinates"]["lat"])
+        cluster = [points.pop(0)]
+
+        index = 0
+        while index < len(points):
+            p2 = Point(Point(points[index]["coordinates"]["lng"], points[index]["coordinates"]["lat"]))
+            d = p1.distance(p2)
+            if d < distance_degrees:
+                # If a point is popped, the next point will be shifted to the same index, so do not increment index
+                cluster.append(points.pop(index))
+            else:
+                index += 1
+
+        clusters.append(cluster)
+
+    return clusters
+
+
+def reduce_clusters_to_centroids(clusters):
+    """Reduce clusters into centroids representing the geometric center of each cluster"""
+    centroids = []
+
+    for c in clusters:
+        points = []
+        average_weight = 0
+        for p in c:
+            points.append((p["coordinates"]["lng"], p["coordinates"]["lat"]))
+            average_weight += p["meta"]["weight"]
+        average_weight /= len(c)
+
+        cluster_shape = MultiPoint(points)
+        centroid = cluster_shape.centroid
+        centroids.append({
+            "coordinates": {
+                "lat": centroid.y,
+                "lng": centroid.x
+            },
+            "meta": {
+                "weight": average_weight
+            }
+        })
+
+    return centroids
